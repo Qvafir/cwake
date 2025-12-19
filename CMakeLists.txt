@@ -9,11 +9,13 @@ set(CMAKE_C_EXTENSIONS OFF)        # Disable compiler extensions (optional, for 
 add_executable(cwake main.c
     cwake.h
     cwake.c
-    mock.c mock.h tests.c tests.h)
+    mock.c mock.h tests.c tests.h
+    common.c common.h)
 
 target_compile_definitions(cwake PRIVATE CWAKE_TEST)
 
 include(GNUInstallDirs)
+
 install(TARGETS cwake
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

@@ -6,18 +6,11 @@
  */
 #include <stdint.h>
 #include <string.h>
-#include <stdio.h>
+//#include <stdio.h>
 
 #include "cwake.h"
 #include "mock.h"
-
-#define CWAKE_LOG(msg, ...) printf("[%7s:%4d] "msg"\n",__FILE_NAME__, __LINE__, ##__VA_ARGS__)
-#define CWAKE_ASSERT(expression) \
-    if (!(expression)) { \
-        CWAKE_LOG("FAILED: %s", \
-                #expression ); \
-        return; \
-    }
+#include "common.h"
 
 
 static int pass_counter = 0;
@@ -36,7 +29,7 @@ static cwake_platform create_test_platform(uint8_t addr, uint32_t timeout) {
 }
 
 static void test_packet_formation() {
-    CWAKE_LOG("TEST packet formation...");
+    log("TEST packet formation...");
     total_counter+=1;
 
 
@@ -56,16 +49,16 @@ static void test_packet_formation() {
                                  sample+DATA_POS+1,
                                  sample[SIZE_POS+1],
                                  &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
-    CWAKE_ASSERT(sizeof(expect) == mock_tx_index);
-    CWAKE_ASSERT(!memcmp(expect, mock_tx_buffer, sizeof(expect)));
+    ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(sizeof(expect) == mock_tx_index);
+    ASSERT(!memcmp(expect, mock_tx_buffer, sizeof(expect)));
 
     pass_counter+=1;
-    CWAKE_LOG("PASSED");
+    log("PASSED");
 }
 
 static void test_packet_reception() {
-    CWAKE_LOG("TEST packet reception...");
+    log("TEST packet reception...");
     total_counter+=1;
 
     cwake_platform platform = create_test_platform(0x01, 10);
@@ -79,7 +72,7 @@ static void test_packet_reception() {
                                  data,
                                  sizeof(data),
                                  &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     //put sample to mock_rx_buffer and set mock_rx_index
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index);
@@ -89,9 +82,9 @@ static void test_packet_reception() {
     while (count) {
         count -= 1;
         err = cwake_poll(&platform);
-        CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+        ASSERT(err == CWAKE_ERROR_NONE);
     }
-    CWAKE_ASSERT(mock_called_cmd == FEND);
+    ASSERT(mock_called_cmd == FEND);
     mock_called_cmd = 0;
 
     //=== use another addr ===
@@ -101,7 +94,7 @@ static void test_packet_reception() {
                      data,
                      sizeof(data),
                      &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     //put sample to mock_rx_buffer and set mock_rx_index
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index);
@@ -111,9 +104,9 @@ static void test_packet_reception() {
     while (count) {
         count -= 1;
         err = cwake_poll(&platform);
-        CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+        ASSERT(err == CWAKE_ERROR_NONE);
     }
-    CWAKE_ASSERT(mock_called_cmd == 0);
+    ASSERT(mock_called_cmd == 0);
 
     //=== use bad crc or data ===
     mock_reset_buffers();
@@ -122,7 +115,7 @@ static void test_packet_reception() {
                      data,
                      sizeof(data),
                      &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     //put sample to mock_rx_buffer and set mock_rx_index
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index);
@@ -135,8 +128,8 @@ static void test_packet_reception() {
         err = cwake_poll(&platform);
         if (err) count = 0;
     }
-    CWAKE_ASSERT(err == CWAKE_ERROR_CRC);
-    CWAKE_ASSERT(mock_called_cmd == 0);
+    ASSERT(err == CWAKE_ERROR_CRC);
+    ASSERT(mock_called_cmd == 0);
 
     //=== use bad stuffing ===
     mock_reset_buffers();
@@ -145,7 +138,7 @@ static void test_packet_reception() {
                      data,
                      sizeof(data),
                      &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     //put sample to mock_rx_buffer and set mock_rx_index
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index);
@@ -158,8 +151,8 @@ static void test_packet_reception() {
         err = cwake_poll(&platform);
         if (err) count = 0;
     }
-    CWAKE_ASSERT(err == CWAKE_ERROR_INVALID_DATA);
-    CWAKE_ASSERT(mock_called_cmd == 0);
+    ASSERT(err == CWAKE_ERROR_INVALID_DATA);
+    ASSERT(mock_called_cmd == 0);
 
     //=== use bad preamble ===
     mock_reset_buffers();
@@ -168,7 +161,7 @@ static void test_packet_reception() {
                      data,
                      sizeof(data),
                      &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index);
     mock_rx_index = mock_tx_index;
@@ -180,8 +173,8 @@ static void test_packet_reception() {
         err = cwake_poll(&platform);
         if (err) count = 0;
     }
-    CWAKE_ASSERT(err == CWAKE_ERROR_INVALID_DATA);
-    CWAKE_ASSERT(mock_called_cmd == 0);
+    ASSERT(err == CWAKE_ERROR_INVALID_DATA);
+    ASSERT(mock_called_cmd == 0);
 
 
 
@@ -192,7 +185,7 @@ static void test_packet_reception() {
                      data,
                      sizeof(data),
                      &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index);
     mock_rx_index = mock_tx_index;
@@ -203,7 +196,7 @@ static void test_packet_reception() {
                      data,
                      sizeof(data),
                      &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     memcpy(mock_rx_buffer + mock_rx_index, mock_tx_buffer, mock_tx_index);
     mock_rx_index += mock_tx_index;
@@ -214,8 +207,8 @@ static void test_packet_reception() {
         err = cwake_poll(&platform);
         if (err) count = 0;
     }
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
-    CWAKE_ASSERT(mock_called_cmd == 0x15);
+    ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(mock_called_cmd == 0x15);
 
     //=== break down by stuffed code ===
     mock_reset_buffers();
@@ -224,7 +217,7 @@ static void test_packet_reception() {
                      data,
                      sizeof(data),
                      &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
     uint8_t tail = 4;
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index-tail);
     mock_rx_index = mock_tx_index-tail;
@@ -234,7 +227,7 @@ static void test_packet_reception() {
         err = cwake_poll(&platform);
         if (err) count = 0;
     }
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
     memcpy(mock_rx_buffer+mock_rx_index, mock_tx_buffer + mock_tx_index-tail, mock_tx_index-tail);
     mock_rx_index += tail;
     count = 10;
@@ -243,15 +236,15 @@ static void test_packet_reception() {
         err = cwake_poll(&platform);
         if (err) count = 0;
     }
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
-    CWAKE_ASSERT(mock_called_cmd == 0xFF);
+    ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(mock_called_cmd == 0xFF);
 
     pass_counter+=1;
-    CWAKE_LOG("PASSED");
+    log("PASSED");
 }
 
 static void test_handler_return() {
-    CWAKE_LOG("TEST handler return...");
+    log("TEST handler return...");
     total_counter+=1;
 
     cwake_platform platform = create_test_platform(0x01, 10);
@@ -270,7 +263,7 @@ static void test_handler_return() {
                                  data,
                                  sizeof(data),
                                  &platform);
-    CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+    ASSERT(err == CWAKE_ERROR_NONE);
 
     //put sample to mock_rx_buffer and set mock_rx_index
     memcpy(mock_rx_buffer, mock_tx_buffer, mock_tx_index);
@@ -282,17 +275,17 @@ static void test_handler_return() {
     while (count) {
         count -= 1;
         err = cwake_poll(&platform);
-        CWAKE_ASSERT(err == CWAKE_ERROR_NONE);
+        ASSERT(err == CWAKE_ERROR_NONE);
     }
-    CWAKE_ASSERT(mock_called_cmd == 0xCF);
-    CWAKE_ASSERT(!memcmp(mock_tx_buffer, expect, sizeof(expect)));
+    ASSERT(mock_called_cmd == 0xCF);
+    ASSERT(!memcmp(mock_tx_buffer, expect, sizeof(expect)));
 
     pass_counter+=1;
-    CWAKE_LOG("PASSED");
+    log("PASSED");
 }
 
 static void test_timeout() {
-    CWAKE_LOG("TEST timeout...");
+    log("TEST timeout...");
     total_counter+=1;
 
     cwake_platform platform = create_test_platform(0x01, 5);
@@ -311,14 +304,26 @@ static void test_timeout() {
         err = cwake_poll(&platform);
         if (err) count = 0;
     }
-    CWAKE_ASSERT(err == CWAKE_ERROR_TIMEOUT);
+    ASSERT(err == CWAKE_ERROR_TIMEOUT);
 
     pass_counter+=1;
-    CWAKE_LOG("PASSED");
+    log("PASSED");
 }
 
+// static void test_perform() {
+//     log("TEST perform...");
+//     //packet creation speed test (1000 times)
+//     uint32_t creation_time_start = 0;
+//     uint32_t creation_time = 0;
+
+
+//     //polling speed test (1000 times)
+//     //all process speedtest (1000 times)
+
+// }
+
 void cwake_lib_test(void) {
-    CWAKE_LOG("=== Starting CWAKE library tests ===");
+    log("=== Starting CWAKE library tests ===");
 
 
     test_packet_formation();
@@ -326,6 +331,6 @@ void cwake_lib_test(void) {
     test_handler_return();
     test_timeout();
 
-    CWAKE_LOG("=== All CWAKE library tests complete ===");
-    CWAKE_LOG("PASSED %d / %d", pass_counter, total_counter);
+    log("=== All CWAKE library tests complete ===");
+    log("PASSED %d / %d", pass_counter, total_counter);
 }
