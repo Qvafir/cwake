@@ -19,6 +19,7 @@ extern uint32_t mock_time_ms;
 extern uint8_t mock_called_cmd;
 extern uint8_t mock_rd_buffer[];
 
+uint8_t mock_dummy_rw(uint8_t* buf, uint8_t count);
 uint8_t mock_read(uint8_t* buf, uint8_t count);
 uint8_t mock_write(uint8_t* buf, uint8_t count);
 uint32_t mock_time_ms_func();

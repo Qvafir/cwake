@@ -5,8 +5,8 @@
  * @copyright MIT License, see repository LICENSE file
  */
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
-//#include <stdio.h>
 
 #include "cwake.h"
 #include "mock.h"
@@ -26,6 +26,15 @@ static cwake_platform create_test_platform(uint8_t addr, uint32_t timeout) {
         .handle = mock_handle
     };
     return platform;
+}
+
+void cwake_debug_print(const char *format, ...){
+    va_list args;
+    va_start(args, format);
+    char msg[512];
+    vsnprintf(msg, 512, format, args);
+    log(msg);
+    va_end(args);
 }
 
 static void test_packet_formation() {
@@ -310,17 +319,37 @@ static void test_timeout() {
     log("PASSED");
 }
 
-// static void test_perform() {
-//     log("TEST perform...");
-//     //packet creation speed test (1000 times)
-//     uint32_t creation_time_start = 0;
-//     uint32_t creation_time = 0;
+static void test_perform() {
+    log("TEST perform...");
+    total_counter+=1;
+    //packet creation speed test (1000 times)
+    uint64_t creation_time_start = 0;
+    uint64_t creation_time = 0;
+    uint8_t data[252] = {FEND,};
+
+    cwake_platform platform = create_test_platform(0x01, 5);
+    platform.read = mock_dummy_rw;
+    platform.write = mock_dummy_rw;
+    cwake_init(&platform);
+
+    creation_time_start = time_now_ns();
+    for (int var = 0; var < 1000; ++var) {
+        cwake_call(FEND, FEND, data, 252, &platform);
+    }
+    creation_time = time_now_ns() - creation_time_start;
+    log("packet creation time (1000 samples): %ds = %dms = %dus",
+        creation_time/1000000000,
+        creation_time/1000000,
+        creation_time/1000
+        );
+    log("packet creation speed: %d B/s", ((uint64_t)1000000 * (uint64_t)1000) / (creation_time / 1000) * (uint64_t)252);
 
 
-//     //polling speed test (1000 times)
-//     //all process speedtest (1000 times)
-
-// }
+    //polling speed test (1000 times)
+    //all process speedtest (1000 times)
+    pass_counter+=1;
+    log("PASSED");
+}
 
 void cwake_lib_test(void) {
     log("=== Starting CWAKE library tests ===");
@@ -330,6 +359,7 @@ void cwake_lib_test(void) {
     test_packet_reception();
     test_handler_return();
     test_timeout();
+    //test_perform();
 
     log("=== All CWAKE library tests complete ===");
     log("PASSED %d / %d", pass_counter, total_counter);

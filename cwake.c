@@ -17,6 +17,29 @@
 #define DSTATIC
 #endif
 
+#ifdef CWAKE_DEBUG_OUTPUT
+#include <ctype.h>
+extern void cwake_debug_print(const char *format, ...);
+#define DEBUG_PRINT(msg, ...) cwake_debug_print(msg, ##__VA_ARGS__)
+static char* format_hex_ascii(const unsigned char *data, size_t size) {
+    const size_t out_max = 512;
+    static char out_str[out_max];
+
+    size_t pos = 0;
+    for (size_t i = 0; i < size; i++)
+        pos += snprintf(out_str + pos, out_max - pos, "%02X ", data[i]);
+    pos += snprintf(out_str + pos, out_max - pos, "| ");
+    for (size_t i = 0; i < size; i++) {
+        char c = isprint(data[i]) ? data[i] : '.';
+        pos += snprintf(out_str + pos, out_max - pos, "%c", c);
+    }
+    out_str[pos] = 0;
+    return out_str;
+}
+#else
+#define DEBUG_PRINT(msg, ...) 0
+#endif
+
 // =============================================================== Declarations
 // WAKE protocol specific codes
 const uint8_t FEND  = 0xC0;
@@ -56,6 +79,7 @@ DSTATIC void reset_buffers(cwake_platform* platform)
 DSTATIC void set_next_state(cwake_state new_state, cwake_platform* platform)
 {
     cwake_state current_state = platform->service.state;
+    if(current_state != new_state)DEBUG_PRINT("change state %d to %d", current_state, new_state);
 
     switch (new_state) {
     case CWAKE_STATE_PENDING:
@@ -186,8 +210,8 @@ DSTATIC cwake_error read_and_destuff(cwake_platform* platform)
     uint8_t readed = platform->read(stuffer_buffer + *stuffer_buffer_tail,
                                     platform->service.pending_size);
     if (readed < 1) return CWAKE_ERROR_NONE;
+    DEBUG_PRINT("Rx: %s", format_hex_ascii(stuffer_buffer + *stuffer_buffer_tail, readed));
     *stuffer_buffer_tail += readed;
-
     // check for PREAMBLE
     for (int i = 0; i < *stuffer_buffer_tail; ++i) {
         if ( stuffer_buffer[i] == PREAMBLE )
@@ -250,6 +274,7 @@ cwake_error cwake_poll(cwake_platform* platform)
         if (platform->read(platform->service.work_buffer,
                            platform->service.pending_size)
             ){
+            DEBUG_PRINT("Rx: %s", format_hex_ascii(platform->service.work_buffer, platform->service.pending_size));
             if ( platform->service.work_buffer[0] == PREAMBLE ) {
                 set_next_state(CWAKE_STATE_HEADER_RECEIVING, platform);
                 return CWAKE_ERROR_NONE;
@@ -372,9 +397,12 @@ cwake_error cwake_call(uint8_t addr, uint8_t cmd,
     if ( *stuff_buffer_tail == 0 ) {
         return CWAKE_ERROR_INVALID_DATA;
     }
+    DEBUG_PRINT("Tx: %s", format_hex_ascii(stuff_buffer, *stuff_buffer_tail));
     platform->write(stuff_buffer, *stuff_buffer_tail);
 
     reset_buffers(platform);
 
     return CWAKE_ERROR_NONE;
 }
+
+#undef DEBUG_PRINT

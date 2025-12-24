@@ -18,6 +18,11 @@ uint32_t mock_time_ms = 0;
 uint8_t mock_called_cmd = 0;
 uint8_t mock_rd_buffer[512];
 
+uint8_t mock_dummy_rw(uint8_t* buf, uint8_t count)
+{
+    return count;
+}
+
 uint8_t mock_read(uint8_t* buf, uint8_t count) {
     if (mock_rx_index <= mock_rx_start) {
         mock_rx_index = 0;

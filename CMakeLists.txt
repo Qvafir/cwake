@@ -13,7 +13,7 @@ add_executable(cwake main.c
     common.c common.h)
 
 target_compile_definitions(cwake PRIVATE CWAKE_TEST)
-
+target_compile_definitions(cwake PRIVATE CWAKE_DEBUG_OUTPUT)
 include(GNUInstallDirs)
 
 install(TARGETS cwake

@@ -22,8 +22,6 @@ minimal requirements:
 
 Just copy `cwake.h` and `cwake.c` to your project directory and include it.
 
-
-
 ## How to use
 
 To prepare, you only need to implement 4 functions and initialize a special structure
@@ -148,3 +146,24 @@ Client sends a packet to the server with server address in the header and a comm
 Server, in response to a command, sends a packet with its own address in the header and the code of the command to which it responds.
 
 Client and server can send broadcast packets with the address 0x00 in the header.
+
+## Additional info
+
+### Debug output
+
+You can enable debug messages for the library if necessary.
+
+1. implement function `cwake_debug_print`. For example:
+   
+   ```c
+   void cwake_debug_print(const char *format, ...){
+       va_list args;
+       va_start(args, format);
+       char msg[512];
+       vsnprintf(msg, 512, format, args);
+       printf("CWAKE DEBUG: %s\n", msg);
+       va_end(args);
+   }
+   ```
+
+2. define `CWAKE_DEBUG_OUTPUT`
