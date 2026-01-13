@@ -22,8 +22,8 @@
 extern void cwake_debug_print(const char *format, ...);
 #define DEBUG_PRINT(msg, ...) cwake_debug_print(msg, ##__VA_ARGS__)
 static char* format_hex_ascii(const unsigned char *data, size_t size) {
-    const size_t out_max = 512;
-    static char out_str[out_max];
+    static char out_str[2042];
+    const size_t out_max = sizeof(out_str);
 
     size_t pos = 0;
     for (size_t i = 0; i < size; i++)
@@ -37,7 +37,7 @@ static char* format_hex_ascii(const unsigned char *data, size_t size) {
     return out_str;
 }
 #else
-#define DEBUG_PRINT(msg, ...) 0
+#define DEBUG_PRINT(msg, ...)
 #endif
 
 // =============================================================== Declarations

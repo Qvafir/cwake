@@ -31,8 +31,8 @@ static cwake_platform create_test_platform(uint8_t addr, uint32_t timeout) {
 void cwake_debug_print(const char *format, ...){
     va_list args;
     va_start(args, format);
-    char msg[512];
-    vsnprintf(msg, 512, format, args);
+    char msg[2042];
+    vsnprintf(msg, sizeof(msg), format, args);
     log(msg);
     va_end(args);
 }
