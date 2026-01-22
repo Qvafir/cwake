@@ -18,18 +18,8 @@ typedef enum cwake_error {
     CWAKE_ERROR_BUSY         = -5
 } cwake_error;
 
-typedef enum cwake_state {
-    CWAKE_STATE_PENDING            = 1,
-    CWAKE_STATE_HEADER_RECEIVING   = 2,
-    CWAKE_STATE_COMPLETE_RECEIVING = 3,
-    CWAKE_STATE_RECEIVING          = 4,
-    CWAKE_STATE_HANDLING           = 5
-} cwake_state;
-
 struct cwake_service {
     uint32_t start_pending_time;
-
-    cwake_state state;
     //new line buffers
     uint8_t buffer_rxenc[256*2];    // encoded received data (raw)
     uint8_t buffer_rxdec[256];      // decoded received data
@@ -115,7 +105,6 @@ extern const int16_t SIZE_POS;
 extern const int16_t DATA_POS;
 
 void reset_buffers(cwake_platform* platform);
-void set_next_state(cwake_state new_state, cwake_platform* platform);
 void reset_state(cwake_platform* platform);
 uint8_t is_timeout(cwake_platform* platform);
 void generate_crc8_table(uint8_t polynomial);
