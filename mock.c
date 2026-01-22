@@ -32,7 +32,7 @@ uint8_t mock_read(uint8_t* buf, uint8_t count) {
 
     uint8_t available = mock_rx_index - mock_rx_start;
 
-    if ( count <= available ) {
+    if ( count < available ) {
         memcpy(buf, mock_rx_buffer + mock_rx_start, count);
         mock_rx_start += count;
         return count;

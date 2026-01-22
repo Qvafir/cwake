@@ -22,18 +22,25 @@ typedef enum cwake_state {
     CWAKE_STATE_PENDING            = 1,
     CWAKE_STATE_HEADER_RECEIVING   = 2,
     CWAKE_STATE_COMPLETE_RECEIVING = 3,
+    CWAKE_STATE_RECEIVING          = 4,
+    CWAKE_STATE_HANDLING           = 5
 } cwake_state;
 
 struct cwake_service {
-    uint8_t stuffer_buffer   [256*2];
-    uint8_t work_buffer      [256];
-
-    uint32_t  work_buffer_tail;
-    uint32_t  stuffer_buffer_tail;
     uint32_t start_pending_time;
-    uint8_t  pending_size;
 
     cwake_state state;
+    //new line buffers
+    uint8_t buffer_rxenc[256*2];    // encoded received data (raw)
+    uint8_t buffer_rxdec[256];      // decoded received data
+    uint8_t buffer_txenc[256*2];    // encoded transmitting data
+    uint8_t buffer_txdec[256];      // decoded transmitting data (raw)
+    //uint8_t* buffer_rxenc_fstart;    //
+    uint8_t* buffer_rxenc_dstart;       // stored data start
+    uint8_t* buffer_rxenc_dend;         // stored data end
+    uint8_t* buffer_rxdec_dend;         // stored data end
+
+    uint8_t uncomplete_fesc_is_reserved;
 };
 
 typedef struct cwake_platform {

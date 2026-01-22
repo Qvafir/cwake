@@ -307,6 +307,7 @@ static void test_timeout() {
 
     cwake_error err = CWAKE_ERROR_NONE;
     int count = 15;
+    mock_time_ms = 23;
     while (count) {
         count -= 1;
         mock_time_ms += 1;
