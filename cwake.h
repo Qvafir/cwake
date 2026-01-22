@@ -36,8 +36,8 @@ struct cwake_service {
 typedef struct cwake_platform {
     uint8_t     addr;
     uint32_t    timeout_ms;
-    uint8_t     (*read) (uint8_t* buf, uint32_t count);
-    uint8_t     (*write) (uint8_t* buf, uint32_t count);
+    uint32_t     (*read) (uint8_t* buf, uint32_t count);
+    uint32_t     (*write) (uint8_t* buf, uint32_t count);
     uint32_t    (*current_time_ms) ();
     int32_t     (*handle) (uint8_t cmd,
                            uint8_t* data, uint8_t size,

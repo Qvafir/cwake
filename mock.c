@@ -20,7 +20,7 @@ uint8_t mock_rd_buffer[512];
 
 uint32_t handle_counter = 0;
 
-uint8_t mock_dummy_rw(uint8_t* buf, uint32_t count)
+uint32_t mock_dummy_rw(uint8_t* buf, uint32_t count)
 {
     return count;
 }
@@ -32,7 +32,7 @@ int32_t mock_dummy_handle(uint8_t cmd, uint8_t* data, uint8_t size,
     return 0;
 }
 
-uint8_t mock_reread(uint8_t* buf, uint32_t count) {
+uint32_t mock_reread(uint8_t* buf, uint32_t count) {
     if (mock_rx_index <= mock_rx_start) {
         mock_rx_start = 0;
     }
@@ -51,7 +51,7 @@ uint8_t mock_reread(uint8_t* buf, uint32_t count) {
     return available;
 }
 
-uint8_t mock_read(uint8_t* buf, uint32_t count) {
+uint32_t mock_read(uint8_t* buf, uint32_t count) {
     if (mock_rx_index <= mock_rx_start) {
         mock_rx_index = 0;
         mock_rx_start = 0;
@@ -73,7 +73,7 @@ uint8_t mock_read(uint8_t* buf, uint32_t count) {
     return available;
 }
 
-uint8_t mock_write(uint8_t* buf, uint32_t count) {
+uint32_t mock_write(uint8_t* buf, uint32_t count) {
 
     memcpy(mock_tx_buffer, buf, count);
     mock_tx_index = count;

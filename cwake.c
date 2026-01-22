@@ -211,7 +211,7 @@ cwake_error cwake_poll(cwake_platform* platform)
 
         uint32_t received = platform->read(
                     ps->buffer_rxenc_dend + ps->uncomplete_fesc_is_reserved,
-                    UINT8_MAX                                                  //TODO use uint32_t for read max size
+                    WORK_BUFFER_SIZE*2
                     );
 
         if (received){
