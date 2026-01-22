@@ -79,6 +79,15 @@ static inline  void reset_buffer_rxdec(cwake_platform* platform)
 {
     platform->service.buffer_rxdec_dend = platform->service.buffer_rxdec;
 }
+static inline  int is_empty_buffer_rxenc(cwake_platform* platform)
+{
+    if(platform->service.buffer_rxenc_dstart >=
+        platform->service.buffer_rxenc_dend) {
+        reset_buffer_rxenc(platform);
+        return 1;
+    }
+    return 0;
+}
 
 static inline  void start_timeout_timer(cwake_platform* platform)
 {
@@ -177,43 +186,13 @@ DSTATIC size_t destuff(const uint8_t* src, size_t src_len, uint8_t* dst, size_t 
     return dst_len;
 }
 
-DSTATIC cwake_error _poll_handle_return(
-    cwake_error err_if_complete,
-    cwake_error err_if_continue,
-    cwake_platform* platform, uint32_t str_number)
-{
-    if(platform->service.buffer_rxenc_dstart >=   //if rx encoded buffer is empty
-        platform->service.buffer_rxenc_dend) {
-
-        reset_buffer_rxenc(platform);
-
-        if (platform->service.uncomplete_fesc_is_reserved) {
-            *platform->service.buffer_rxenc_dend = FESC;
-            platform->service.buffer_rxenc_dend += 1;
-        }
-
-        if (err_if_complete != CWAKE_ERROR_NONE) {
-            DEBUG_PRINT("Error in complete rx buffer handling: %d/%d", str_number, err_if_complete );
-        }
-        return err_if_complete;
-    }
-    else {                                        //if rx encoded buffer contains data
-        if (err_if_continue != CWAKE_ERROR_NONE) {
-            DEBUG_PRINT("Error in continue rx buffer handling: %d/%d", str_number, err_if_continue );
-        }
-        return err_if_continue;
-    }
-}
-
-#define poll_handle_return(err1, err2, p) _poll_handle_return(err1, err2, p, __LINE__)
-
 // ========================================================== Public functional
 cwake_error cwake_init(cwake_platform* platform)
 {
     generate_crc8_table(CRC8_POLYNOMIAL);
     reset_buffer_rxenc(platform);
     reset_buffer_rxdec(platform);
-
+    platform->service.uncomplete_fesc_is_reserved = 0;
 
     return CWAKE_ERROR_NONE;
 }
@@ -224,17 +203,21 @@ cwake_error cwake_poll(cwake_platform* platform)
 
     // ==== RECEIVING ====
     // read external rx buffer if internal rxenc buffer is empty
-    if( (ps->buffer_rxenc + ps->uncomplete_fesc_is_reserved) == ps->buffer_rxenc_dend ) {//rxenc buffer is empty
+    if( is_empty_buffer_rxenc(platform) ) {//rxenc buffer is empty
         if ( is_timeout(platform) ) {
             reset_buffer_rxdec(platform);
             return CWAKE_ERROR_TIMEOUT;
         }
 
-        uint32_t received = platform->read(ps->buffer_rxenc_dend, UINT8_MAX); //TODO use uint32_t for read max size
+        uint32_t received = platform->read(
+                    ps->buffer_rxenc_dend + ps->uncomplete_fesc_is_reserved,
+                    UINT8_MAX                                                  //TODO use uint32_t for read max size
+                    );
 
         if (received){
-            DEBUG_PRINT("Rx: %s", format_hex_ascii(platform->service.buffer_rxenc_dend, received));
-            ps->buffer_rxenc_dend += received;
+            DEBUG_PRINT("Rx: %s", format_hex_ascii(platform->service.buffer_rxenc_dend + ps->uncomplete_fesc_is_reserved, received));
+            if (ps->uncomplete_fesc_is_reserved) *ps->buffer_rxenc_dend = FESC;
+            ps->buffer_rxenc_dend += received + ps->uncomplete_fesc_is_reserved;
             stop_timeout_timer(platform);
         }
         else return CWAKE_ERROR_NONE;
@@ -272,7 +255,7 @@ cwake_error cwake_poll(cwake_platform* platform)
     if(ps->buffer_rxdec_dend == ps->buffer_rxdec &&
             (*(buffer_rxenc_fstart-1) != PREAMBLE)
         ) {
-        return poll_handle_return(CWAKE_ERROR_INVALID_DATA, CWAKE_ERROR_INVALID_DATA, platform);
+        return CWAKE_ERROR_INVALID_DATA;
     }
 
     // ==== DESTUFFING ====
@@ -283,7 +266,7 @@ cwake_error cwake_poll(cwake_platform* platform)
                                 ps->buffer_rxdec_dend, rxdec_buffer_size
                                 );
     if (destuffed == 0) {
-        return poll_handle_return(CWAKE_ERROR_INVALID_DATA, CWAKE_ERROR_INVALID_DATA, platform);
+        return CWAKE_ERROR_INVALID_DATA;
     }
     ps->buffer_rxdec_dend += destuffed;
 
@@ -291,26 +274,38 @@ cwake_error cwake_poll(cwake_platform* platform)
     uint32_t buffer_rxdec_stored = ps->buffer_rxdec_dend - ps->buffer_rxdec;
     //check complete header
     if ( buffer_rxdec_stored < HEADER_SIZE ) {
-        if ( ps->buffer_rxenc_dstart >= ps->buffer_rxenc_dend ) start_timeout_timer(platform);      //TODO refactor
-        return  poll_handle_return(CWAKE_ERROR_NONE, CWAKE_ERROR_INVALID_DATA, platform);
+        if (is_empty_buffer_rxenc(platform)) {
+            start_timeout_timer(platform);
+            return CWAKE_ERROR_NONE;
+        }
+        else {
+            reset_buffer_rxdec(platform);
+            return CWAKE_ERROR_INVALID_DATA;
+        }
     }
     //check correct size code
     if (ps->buffer_rxdec[SIZE_POS] > (WORK_BUFFER_SIZE - PREAMBLE_SIZE - HEADER_SIZE - CRC_SIZE) ) {
         reset_buffer_rxdec(platform);
-        return poll_handle_return(CWAKE_ERROR_INVALID_DATA, CWAKE_ERROR_INVALID_DATA, platform);
+        return CWAKE_ERROR_INVALID_DATA;
     }
 
     //check complete request
     if ( buffer_rxdec_stored < (ps->buffer_rxdec[SIZE_POS] + HEADER_SIZE + CRC_SIZE) ){
-        if ( ps->buffer_rxenc_dstart >= ps->buffer_rxenc_dend ) start_timeout_timer(platform);      //TODO refactor
-        return poll_handle_return(CWAKE_ERROR_NONE, CWAKE_ERROR_INVALID_DATA, platform);
+        if (is_empty_buffer_rxenc(platform)) {
+            start_timeout_timer(platform);
+            return CWAKE_ERROR_NONE;
+        }
+        else {
+            reset_buffer_rxdec(platform);
+            return CWAKE_ERROR_INVALID_DATA;
+        }
     }
 
     //check crc
     uint8_t data[] = {FEND};
     if ( get_crc8(ps->buffer_rxdec, buffer_rxdec_stored, get_crc8(data, 1, 0)) ){
         reset_buffer_rxdec(platform);
-        return poll_handle_return(CWAKE_ERROR_CRC, CWAKE_ERROR_CRC, platform);
+        return CWAKE_ERROR_CRC;
     }
 
     //check addr (address filtering)
@@ -319,40 +314,34 @@ cwake_error cwake_poll(cwake_platform* platform)
         platform->service.buffer_rxdec[ADDR_POS] != platform->addr
         ){
         reset_buffer_rxdec(platform);
-        return poll_handle_return(CWAKE_ERROR_NONE, CWAKE_ERROR_NONE, platform);
+        return CWAKE_ERROR_NONE;
     }
 
     // ==== HANDLING ====
     // call user handler
     uint8_t* return_buffer = NULL;
     uint8_t return_size = 0;
-    platform->handle(platform->service.buffer_rxdec[CMD_POS],
+    uint8_t cmd = platform->service.buffer_rxdec[CMD_POS];
+    platform->handle(cmd,
                      platform->service.buffer_rxdec + DATA_POS,
                      platform->service.buffer_rxdec[SIZE_POS],
                      &return_buffer,
                      &return_size
                      );
 
+    reset_buffer_rxdec(platform);
+
     // return user data to cwake_call if exist
     if (return_buffer && return_size > 0) {
-        cwake_error err = cwake_call(platform->addr,
-                                     platform->service.buffer_rxdec[CMD_POS],
-                                     return_buffer, return_size, platform
-                                     );
-        if ( err ){
-            return poll_handle_return(err, err, platform);
-        }
+        return cwake_call(platform->addr, cmd, return_buffer, return_size, platform);
     }
-
-    reset_buffer_rxdec(platform);
-    return poll_handle_return(CWAKE_ERROR_NONE, CWAKE_ERROR_NONE, platform);
+    return CWAKE_ERROR_NONE;
 }
 
 cwake_error cwake_call(uint8_t addr, uint8_t cmd,
                        uint8_t* data, uint8_t size,
                        cwake_platform* platform)
 {
-    //uint8_t* work_buffer = platform->service.work_buffer;
     uint8_t* work_buffer = platform->service.buffer_txdec;
     uint32_t work_buffer_tail = 0;
 
@@ -369,8 +358,6 @@ cwake_error cwake_call(uint8_t addr, uint8_t cmd,
     work_buffer[work_buffer_tail] = get_crc8(work_buffer, work_buffer_tail, 0);
     work_buffer_tail += 1;
 
-
-    //uint8_t* stuff_buffer = platform->service.stuffer_buffer;
     uint8_t* stuff_buffer = platform->service.buffer_txenc;
     uint32_t stuff_buffer_tail = 0;
 

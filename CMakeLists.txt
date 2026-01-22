@@ -10,7 +10,9 @@ add_executable(cwake main.c
     cwake.h
     cwake.c
     mock.c mock.h tests.c tests.h
-    common.c common.h)
+    common.c common.h
+    perform.c
+    perform.h)
 
 target_compile_definitions(cwake PRIVATE CWAKE_TEST)
 target_compile_definitions(cwake PRIVATE CWAKE_DEBUG_OUTPUT)

@@ -16,18 +16,6 @@
 static int pass_counter = 0;
 static int total_counter = 0;
 
-static cwake_platform create_test_platform(uint8_t addr, uint32_t timeout) {
-    cwake_platform platform = {
-        .addr = addr,
-        .timeout_ms = timeout,
-        .read = mock_read,
-        .write = mock_write,
-        .current_time_ms = mock_time_ms_func,
-        .handle = mock_handle
-    };
-    return platform;
-}
-
 void cwake_debug_print(const char *format, ...){
     va_list args;
     va_start(args, format);
@@ -42,7 +30,7 @@ static void test_packet_formation() {
     total_counter+=1;
 
 
-    cwake_platform platform = create_test_platform(0x01, 1000);
+    cwake_platform platform = mock_create_cwake_platform(0x01, 1000);
     cwake_init(&platform);
 
 
@@ -70,7 +58,7 @@ static void test_packet_reception() {
     log("TEST packet reception...");
     total_counter+=1;
 
-    cwake_platform platform = create_test_platform(0x01, 10);
+    cwake_platform platform = mock_create_cwake_platform(0x01, 10);
     cwake_init(&platform);
 
     //create packet sample for assertion
@@ -256,7 +244,7 @@ static void test_handler_return() {
     log("TEST handler return...");
     total_counter+=1;
 
-    cwake_platform platform = create_test_platform(0x01, 10);
+    cwake_platform platform = mock_create_cwake_platform(0x01, 10);
     cwake_init(&platform);
 
     //create packet sample for assertion
@@ -297,7 +285,7 @@ static void test_timeout() {
     log("TEST timeout...");
     total_counter+=1;
 
-    cwake_platform platform = create_test_platform(0x01, 5);
+    cwake_platform platform = mock_create_cwake_platform(0x01, 5);
     cwake_init(&platform);
 
     mock_reset_buffers();
@@ -320,47 +308,13 @@ static void test_timeout() {
     log("PASSED");
 }
 
-static void test_perform() {
-    log("TEST perform...");
-    total_counter+=1;
-    //packet creation speed test (1000 times)
-    uint64_t creation_time_start = 0;
-    uint64_t creation_time = 0;
-    uint8_t data[252] = {FEND,};
-
-    cwake_platform platform = create_test_platform(0x01, 5);
-    platform.read = mock_dummy_rw;
-    platform.write = mock_dummy_rw;
-    cwake_init(&platform);
-
-    creation_time_start = time_now_ns();
-    for (int var = 0; var < 1000; ++var) {
-        cwake_call(FEND, FEND, data, 252, &platform);
-    }
-    creation_time = time_now_ns() - creation_time_start;
-    log("packet creation time (1000 samples): %ds = %dms = %dus",
-        creation_time/1000000000,
-        creation_time/1000000,
-        creation_time/1000
-        );
-    log("packet creation speed: %d B/s", ((uint64_t)1000000 * (uint64_t)1000) / (creation_time / 1000) * (uint64_t)252);
-
-
-    //polling speed test (1000 times)
-    //all process speedtest (1000 times)
-    pass_counter+=1;
-    log("PASSED");
-}
-
 void cwake_lib_test(void) {
     log("=== Starting CWAKE library tests ===");
-
 
     test_packet_formation();
     test_packet_reception();
     test_handler_return();
     test_timeout();
-    //test_perform();
 
     log("=== All CWAKE library tests complete ===");
     log("PASSED %d / %d", pass_counter, total_counter);
