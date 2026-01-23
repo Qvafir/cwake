@@ -193,6 +193,7 @@ cwake_error cwake_init(cwake_platform* platform)
     reset_buffer_rxenc(platform);
     reset_buffer_rxdec(platform);
     platform->service.uncomplete_fesc_is_reserved = 0;
+    stop_timeout_timer(platform);
 
     return CWAKE_ERROR_NONE;
 }
